@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenAI Browser Chat</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #0b1020; color: #e8ecff; }
+    .wrap { max-width: 860px; margin: 32px auto; padding: 24px; background: #121933; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+    h1 { margin-top: 0; }
+    .row { display: grid; gap: 10px; }
+    label { font-size: 0.95rem; color: #c8d2ff; }
+    input, textarea, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2e3a67; box-sizing: border-box; }
+    input, textarea { background: #091027; color: #fff; }
+    textarea { min-height: 90px; resize: vertical; }
+    button { background: #4d7cff; color: #fff; font-weight: 700; cursor: pointer; }
+    button:hover { background: #406ae0; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .result { margin-top: 14px; padding: 12px; border-radius: 8px; background: #0a132d; border: 1px solid #2e3a67; white-space: pre-wrap; }
+    .ok { border-color: #2ec27e; }
+    .bad { border-color: #ff6b6b; }
+    .note { font-size: 0.92rem; color: #aab6e5; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Ask AI (OpenAI API)</h1>
+    <p class="note">Your key stays in this browser tab only. For production, always call OpenAI from your backend.</p>
+
+    <div class="row">
+      <label for="apiKey">OpenAI API Key</label>
+      <input id="apiKey" type="password" placeholder="sk-proj-..." autocomplete="off" />
+
+      <label for="model">Model</label>
+      <input id="model" type="text" value="gpt-4.1-mini" />
+
+      <label for="prompt">Your question</label>
+      <textarea id="prompt" placeholder="Ask me anything..."></textarea>
+
+      <button id="askBtn">Ask AI</button>
+      <div id="result" class="result">Response will appear here.</div>
+    </div>
+  </main>
+
+  <script>
+    const askBtn = document.getElementById('askBtn');
+    const keyInput = document.getElementById('apiKey');
+    const modelInput = document.getElementById('model');
+    const promptInput = document.getElementById('prompt');
+    const result = document.getElementById('result');
+
+    askBtn.addEventListener('click', async () => {
+      const key = keyInput.value.trim();
+      const model = modelInput.value.trim() || 'gpt-4.1-mini';
+      const prompt = promptInput.value.trim();
+      result.className = 'result';
+
+      if (!key) {
+        result.textContent = 'Please enter an API key.';
+        result.classList.add('bad');
+        return;
+      }
+      if (!prompt) {
+        result.textContent = 'Please enter a question.';
+        result.classList.add('bad');
+        return;
+      }
+
+      askBtn.disabled = true;
+      askBtn.textContent = 'Thinking...';
+      result.textContent = 'Contacting OpenAI...';
+
+      try {
+        const res = await fetch('https://api.openai.com/v1/responses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`
+          },
+          body: JSON.stringify({
+            model,
+            input: prompt
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          result.textContent = `❌ Request failed.\nHTTP ${res.status}\n${data.error?.message || JSON.stringify(data, null, 2)}`;
+          result.classList.add('bad');
+          return;
+        }
+
+        const text = data.output_text || 'No text response returned.';
+        result.textContent = `✅ AI response:\n\n${text}`;
+        result.classList.add('ok');
+      } catch (err) {
+        result.textContent = `⚠️ Network or CORS error.\n${err.message}`;
+        result.classList.add('bad');
+      } finally {
+        askBtn.disabled = false;
+        askBtn.textContent = 'Ask AI';
+      }
+    });
+  </script>
+</body>
+</html>
