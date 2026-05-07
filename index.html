@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenAI Key Checker</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #0b1020; color: #e8ecff; }
+    .wrap { max-width: 720px; margin: 40px auto; padding: 24px; background: #121933; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+    h1 { margin-top: 0; }
+    input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2e3a67; }
+    input { background: #091027; color: #fff; margin-bottom: 12px; }
+    button { background: #4d7cff; color: #fff; font-weight: 700; cursor: pointer; }
+    button:hover { background: #406ae0; }
+    .result { margin-top: 16px; padding: 12px; border-radius: 8px; background: #0a132d; border: 1px solid #2e3a67; white-space: pre-wrap; }
+    .ok { border-color: #2ec27e; }
+    .bad { border-color: #ff6b6b; }
+    .note { font-size: 0.92rem; color: #aab6e5; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>OpenAI API Key Checker</h1>
+    <p class="note">For safety, this page keeps the key in your browser only and does not save it.</p>
+    <label for="apiKey">API Key</label>
+    <input id="apiKey" type="password" placeholder="sk-proj-..." autocomplete="off" />
+    <button id="checkBtn">Check Key</button>
+    <div id="result" class="result">Status: waiting...</div>
+  </main>
+
+  <script>
+    const btn = document.getElementById('checkBtn');
+    const keyInput = document.getElementById('apiKey');
+    const result = document.getElementById('result');
+
+    btn.addEventListener('click', async () => {
+      const key = keyInput.value.trim();
+      result.className = 'result';
+      if (!key) {
+        result.textContent = 'Please enter an API key.';
+        result.classList.add('bad');
+        return;
+      }
+
+      result.textContent = 'Checking key against OpenAI API...';
+
+      try {
+        const res = await fetch('https://api.openai.com/v1/models', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${key}`
+          }
+        });
+
+        const body = await res.json();
+
+        if (res.ok) {
+          result.textContent = `✅ Key appears to be working.\nHTTP ${res.status}\nModels returned: ${body.data?.length ?? 0}`;
+          result.classList.add('ok');
+        } else {
+          result.textContent = `❌ Key failed.\nHTTP ${res.status}\n${body.error?.message || JSON.stringify(body, null, 2)}`;
+          result.classList.add('bad');
+        }
+      } catch (err) {
+        result.textContent = `⚠️ Could not reach API.\n${err.message}`;
+        result.classList.add('bad');
+      }
+    });
+  </script>
+</body>
+</html>
