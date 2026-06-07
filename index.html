@@ -2,68 +2,518 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OpenAI Key Checker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Astra AI Chat</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #0b1020; color: #e8ecff; }
-    .wrap { max-width: 720px; margin: 40px auto; padding: 24px; background: #121933; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
-    h1 { margin-top: 0; }
-    input, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2e3a67; }
-    input { background: #091027; color: #fff; margin-bottom: 12px; }
-    button { background: #4d7cff; color: #fff; font-weight: 700; cursor: pointer; }
-    button:hover { background: #406ae0; }
-    .result { margin-top: 16px; padding: 12px; border-radius: 8px; background: #0a132d; border: 1px solid #2e3a67; white-space: pre-wrap; }
-    .ok { border-color: #2ec27e; }
-    .bad { border-color: #ff6b6b; }
-    .note { font-size: 0.92rem; color: #aab6e5; }
+    :root {
+      color-scheme: dark;
+      --bg: #050505;
+      --panel: #101010;
+      --panel-2: #171717;
+      --text: #f8f4ee;
+      --muted: #9ca3af;
+      --line: #292929;
+      --accent: #0a84ff;
+      --accent-2: #25d399;
+      --danger: #ff4d4f;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100dvh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: env(safe-area-inset-top) clamp(14px, 3vw, 28px) env(safe-area-inset-bottom);
+    }
+
+    .topbar {
+      min-height: 76px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      padding: 10px 0 14px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 20% 20%, #52f, #0df 35%, #ff4d8d 70%, #ffd166);
+      box-shadow: 0 0 22px rgba(10, 132, 255, 0.3);
+      font-size: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.35rem, 4vw, 2.1rem);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .engine-settings {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .engine-settings label {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .engine-settings input,
+    .engine-settings select {
+      min-height: 42px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      padding: 0 12px;
+      outline: none;
+    }
+
+    .engine-settings input { width: min(42vw, 300px); }
+    .engine-settings select { width: 118px; }
+
+    .status-pill {
+      justify-self: end;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 0 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .status-pill.connected .dot { background: var(--accent-2); }
+    .status-pill.error .dot { background: var(--danger); }
+    .status-pill.loading .dot { background: #ffd166; animation: pulse 900ms ease-in-out infinite alternate; }
+
+    .messages {
+      width: min(960px, 100%);
+      margin: 0 auto;
+      padding: clamp(18px, 4vw, 48px) 0 16px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+
+    .message {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin: 16px 0;
+      animation: rise 180ms ease-out;
+    }
+
+    .message.user { justify-content: flex-end; }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      border: 2px solid #e8ecff;
+      color: #e8ecff;
+    }
+
+    .message.user .avatar { order: 2; }
+
+    .bubble {
+      max-width: min(680px, 82vw);
+      border-radius: 24px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      padding: 16px 18px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .message.user .bubble {
+      background: linear-gradient(135deg, #1d6cf2, #2b59d9);
+      border-color: transparent;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.05rem, 3vw, 1.6rem);
+    }
+
+    .message.error .bubble {
+      border-color: rgba(255, 77, 79, 0.55);
+      background: #151111;
+    }
+
+    .error-title {
+      display: block;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .composer-wrap {
+      width: min(960px, 100%);
+      margin: 0 auto;
+      padding: 10px 0 max(14px, env(safe-area-inset-bottom));
+    }
+
+    .composer {
+      border: 2px solid #e8ecff;
+      border-radius: 34px;
+      padding: 18px;
+      background: rgba(5, 5, 5, 0.95);
+      box-shadow: var(--shadow);
+    }
+
+    .composer textarea {
+      display: block;
+      width: 100%;
+      min-height: 68px;
+      max-height: 32dvh;
+      resize: none;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.25rem, 4vw, 2rem);
+      line-height: 1.25;
+    }
+
+    .composer textarea::placeholder { color: #8c8f99; }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .secondary-actions {
+      display: flex;
+      gap: 10px;
+      color: #e8ecff;
+    }
+
+    .icon-button {
+      width: 44px;
+      height: 44px;
+      border: 0;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #e8ecff;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .send-button {
+      width: 50px;
+      height: 50px;
+      border: 0;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #e8ecff;
+      color: #050505;
+      cursor: pointer;
+      transition: transform 160ms ease, opacity 160ms ease;
+    }
+
+    .send-button:disabled,
+    .icon-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .send-button:not(:disabled):active { transform: scale(0.94); }
+
+    .hint {
+      margin: 10px 6px 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      from { opacity: 0.45; }
+      to { opacity: 1; }
+    }
+
+    @media (max-width: 740px) {
+      .app { min-height: 100svh; padding-inline: 12px; }
+      .topbar { grid-template-columns: 1fr auto; align-items: start; }
+      .engine-settings { grid-column: 1 / -1; justify-content: stretch; overflow-x: auto; padding-bottom: 2px; }
+      .engine-settings input { width: 100%; min-width: 180px; }
+      .status-pill { font-size: 0.82rem; }
+      .bubble { max-width: 86vw; }
+      .composer { border-radius: 28px; padding: 16px; }
+    }
   </style>
 </head>
 <body>
-  <main class="wrap">
-    <h1>OpenAI API Key Checker</h1>
-    <p class="note">For safety, this page keeps the key in your browser only and does not save it.</p>
-    <label for="apiKey">API Key</label>
-    <input id="apiKey" type="password" placeholder="sk-proj-..." autocomplete="off" />
-    <button id="checkBtn">Check Key</button>
-    <div id="result" class="result">Status: waiting...</div>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand" aria-label="Astra AI">
+        <div class="logo" aria-hidden="true">🌈</div>
+        <h1>Astra<br />AI</h1>
+      </div>
+
+      <div class="engine-settings" aria-label="Engine settings">
+        <label for="apiKey">API key</label>
+        <input id="apiKey" type="password" placeholder="sk-proj-..." autocomplete="off" spellcheck="false" />
+        <label for="model">Model</label>
+        <select id="model">
+          <option value="gpt-4.1-mini">Nexus 4.0</option>
+          <option value="gpt-4.1">Nexus Pro</option>
+          <option value="gpt-4o-mini">Fast Output</option>
+        </select>
+      </div>
+
+      <div id="status" class="status-pill" role="status" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="statusText">Ready</span>
+      </div>
+    </header>
+
+    <section id="messages" class="messages" aria-live="polite" aria-label="Chat messages">
+      <article class="message assistant">
+        <div class="avatar" aria-hidden="true">🤖</div>
+        <div class="bubble">Ask Nexus anything. The client now retries transient failures and uses a controlled timeout instead of leaving you with a disconnected engine.</div>
+      </article>
+    </section>
+
+    <section class="composer-wrap">
+      <form id="chatForm" class="composer">
+        <label for="prompt" class="sr-only">Message</label>
+        <textarea id="prompt" placeholder="Ask Nexus anything..." autocomplete="off" rows="2"></textarea>
+        <div class="actions">
+          <div class="secondary-actions" aria-hidden="true">
+            <button class="icon-button" type="button" title="Attachment" disabled>📎</button>
+            <button class="icon-button" type="button" title="Reasoning" disabled>🧠</button>
+            <button class="icon-button" type="button" title="Web" disabled>🌐</button>
+            <button class="icon-button" type="button" title="Tools" disabled>✨</button>
+          </div>
+          <button id="sendBtn" class="send-button" type="submit" aria-label="Send message">↑</button>
+        </div>
+      </form>
+      <p class="hint">If you still see a timeout, check your API key, mobile network/VPN, and whether the selected model is available to your account.</p>
+    </section>
   </main>
 
   <script>
-    const btn = document.getElementById('checkBtn');
-    const keyInput = document.getElementById('apiKey');
-    const result = document.getElementById('result');
+    const API_URL = 'https://api.openai.com/v1/responses';
+    const REQUEST_TIMEOUT_MS = 45000;
+    const MAX_RETRIES = 1;
 
-    btn.addEventListener('click', async () => {
+    const form = document.getElementById('chatForm');
+    const keyInput = document.getElementById('apiKey');
+    const modelInput = document.getElementById('model');
+    const promptInput = document.getElementById('prompt');
+    const messagesEl = document.getElementById('messages');
+    const sendBtn = document.getElementById('sendBtn');
+    const statusEl = document.getElementById('status');
+    const statusText = document.getElementById('statusText');
+
+    let activeController = null;
+
+    function setStatus(text, state = '') {
+      statusText.textContent = text;
+      statusEl.className = `status-pill ${state}`.trim();
+    }
+
+    function appendMessage(role, text, options = {}) {
+      const item = document.createElement('article');
+      item.className = `message ${role}${options.error ? ' error' : ''}`;
+
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      avatar.setAttribute('aria-hidden', 'true');
+      avatar.textContent = role === 'user' ? '👤' : '🤖';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+
+      if (options.error) {
+        const title = document.createElement('strong');
+        title.className = 'error-title';
+        title.textContent = '❌ Error: Astra Engine';
+        bubble.append(title, document.createTextNode(`\n${text}`));
+      } else {
+        bubble.textContent = text;
+      }
+
+      item.append(avatar, bubble);
+      messagesEl.appendChild(item);
+      messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+      return item;
+    }
+
+    function extractResponseText(data) {
+      if (data.output_text) return data.output_text;
+
+      const chunks = [];
+      for (const output of data.output || []) {
+        for (const content of output.content || []) {
+          if (content.type === 'output_text' && content.text) chunks.push(content.text);
+        }
+      }
+      return chunks.join('\n').trim() || 'No text response returned.';
+    }
+
+    function buildErrorMessage(error, responseStatus) {
+      if (error.name === 'AbortError') {
+        return 'connection timed out. The request was cancelled after 45 seconds to avoid a stuck/disconnected client.';
+      }
+      if (responseStatus === 401) return 'invalid or missing API key. Please paste a valid key.';
+      if (responseStatus === 403) return 'your key does not have access to this model or endpoint.';
+      if (responseStatus === 429) return 'rate limit reached. Wait a moment, then try again.';
+      if (responseStatus && responseStatus >= 500) return 'OpenAI service returned a temporary server error. Please retry.';
+      return error.message || 'connection timed out or client disconnected.';
+    }
+
+    async function callAstraEngine({ key, model, prompt, attempt = 0 }) {
+      activeController = new AbortController();
+      const timeoutId = window.setTimeout(() => activeController.abort(), REQUEST_TIMEOUT_MS);
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          signal: activeController.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${key}`,
+          },
+          body: JSON.stringify({
+            model,
+            input: prompt,
+            temperature: 0.7,
+          }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const message = data.error?.message || buildErrorMessage(new Error('Request failed'), response.status);
+          throw Object.assign(new Error(message), { responseStatus: response.status });
+        }
+        return extractResponseText(data);
+      } catch (error) {
+        const retryable = error.name === 'AbortError' || error.responseStatus === 408 || error.responseStatus === 429 || error.responseStatus >= 500;
+        if (retryable && attempt < MAX_RETRIES) {
+          await new Promise((resolve) => window.setTimeout(resolve, 900));
+          return callAstraEngine({ key, model, prompt, attempt: attempt + 1 });
+        }
+        throw error;
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    }
+
+    function setLoading(isLoading) {
+      sendBtn.disabled = isLoading;
+      promptInput.disabled = isLoading;
+      setStatus(isLoading ? 'Thinking…' : 'Ready', isLoading ? 'loading' : 'connected');
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
       const key = keyInput.value.trim();
-      result.className = 'result';
+      const model = modelInput.value.trim();
+      const prompt = promptInput.value.trim();
+
       if (!key) {
-        result.textContent = 'Please enter an API key.';
-        result.classList.add('bad');
+        appendMessage('assistant', 'invalid or missing API key. Paste your OpenAI API key before sending.', { error: true });
+        setStatus('Missing key', 'error');
         return;
       }
 
-      result.textContent = 'Checking key against OpenAI API...';
+      if (!prompt) {
+        appendMessage('assistant', 'please type a message before sending.', { error: true });
+        setStatus('Empty prompt', 'error');
+        return;
+      }
+
+      appendMessage('user', prompt);
+      promptInput.value = '';
+      setLoading(true);
 
       try {
-        const res = await fetch('https://api.openai.com/v1/models', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${key}`
-          }
-        });
+        const answer = await callAstraEngine({ key, model, prompt });
+        appendMessage('assistant', answer);
+        setStatus('Connected', 'connected');
+      } catch (error) {
+        appendMessage('assistant', buildErrorMessage(error, error.responseStatus), { error: true });
+        setStatus('Error', 'error');
+      } finally {
+        activeController = null;
+        setLoading(false);
+        promptInput.focus();
+      }
+    });
 
-        const body = await res.json();
-
-        if (res.ok) {
-          result.textContent = `✅ Key appears to be working.\nHTTP ${res.status}\nModels returned: ${body.data?.length ?? 0}`;
-          result.classList.add('ok');
-        } else {
-          result.textContent = `❌ Key failed.\nHTTP ${res.status}\n${body.error?.message || JSON.stringify(body, null, 2)}`;
-          result.classList.add('bad');
-        }
-      } catch (err) {
-        result.textContent = `⚠️ Could not reach API.\n${err.message}`;
-        result.classList.add('bad');
+    promptInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        form.requestSubmit();
       }
     });
   </script>
