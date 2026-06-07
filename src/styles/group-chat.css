@@ -1,0 +1,21 @@
+.group-chat-shell {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100dvh;
+  max-width: 900px;
+  margin: 0 auto;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+.message-list { overflow-y: auto; padding: 12px; -webkit-overflow-scrolling: touch; }
+.message-row { margin-bottom: 10px; display: flex; flex-direction: column; max-width: 80%; }
+.message-row.mine { margin-left: auto; align-items: flex-end; }
+.bubble { background: #1e293b; border-radius: 14px; padding: 10px 12px; }
+.message-row.mine .bubble { background: #2563eb; }
+.sender { font-size: 12px; margin-bottom: 4px; opacity: 0.8; }
+footer form { display: flex; gap: 8px; padding: 10px; }
+input { flex: 1; min-height: 44px; border-radius: 999px; border: 1px solid #334155; padding: 0 14px; }
+button { min-height: 44px; padding: 0 16px; border-radius: 999px; }
+.typing-indicator { min-height: 18px; padding: 0 12px; color: #93c5fd; }
+.group-loader { min-height: 100dvh; display: grid; place-items: center; font-weight: 600; }
+@media (max-width: 640px) { .group-chat-shell { height: 100svh; } .message-row { max-width: 92%; } }
