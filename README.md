@@ -50,7 +50,7 @@ groups/{groupId}/typing/{userId}
 
 ## Core files
 
-- `index.html`: Astra/Nexus browser chat UI with timeout, retry, and clear error handling.
+re- `index.html`: Astra/Nexus browser chat UI with timeout, retry, and clear error handling.
 - `src/firebase/groupChatService.js`: Firestore queries, writes, and listener subscriptions.
 - `src/hooks/useGroupChat.js`: reusable React hook for realtime group state.
 - `src/components/GroupChatPage.jsx`: full chat UI with sender differentiation + instant rendering.
